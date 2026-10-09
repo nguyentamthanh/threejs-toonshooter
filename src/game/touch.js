@@ -37,6 +37,7 @@ function bindStick(zone, onChange) {
   zone.addEventListener('pointerdown', (event) => {
     if (event.pointerType !== 'touch' || activeId !== null) return;
     enableTouchUI();
+    input.touch.usingMouse = false;
     event.preventDefault();
     activeId = event.pointerId;
     zone.setPointerCapture(activeId);

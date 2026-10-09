@@ -70,6 +70,7 @@ import { setVisualMode } from './visuals.js';
 
       window.addEventListener('pointermove', (event) => {
         if (event.pointerType === 'touch') return;
+        input.touch.usingMouse = true;
         updatePointer(event);
       });
     }
@@ -101,7 +102,8 @@ import { setVisualMode } from './visuals.js';
 
 
     export function getAimPoint() {
-      if (input.touch.enabled) return getTouchAimPoint();
+      // Hybrid devices: a mouse that moved after the last touch takes over aiming again.
+      if (input.touch.enabled && !input.touch.usingMouse) return getTouchAimPoint();
       raycaster.setFromCamera({ x: input.mouse.x, y: input.mouse.y }, world.camera);
       const point = new THREE.Vector3();
       const hit = raycaster.ray.intersectPlane(groundPlane, point);

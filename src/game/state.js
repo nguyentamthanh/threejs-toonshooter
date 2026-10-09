@@ -5,7 +5,7 @@ import { CONFIG } from './config.js';
       keys: {},
       mouse: { x: 0, y: 0, down: false, justPressed: false },
       // Virtual sticks, -1..1 with y up. Filled in by touch.js.
-      touch: { enabled: false, move: { x: 0, y: 0 }, aim: { active: false, x: 0, y: 0 } }
+      touch: { enabled: false, usingMouse: false, move: { x: 0, y: 0 }, aim: { active: false, x: 0, y: 0 } }
     };
 
 
