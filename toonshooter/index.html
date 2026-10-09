@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tiny Toon Duel</title>
+  <link rel="stylesheet" href="/src/styles.css" />
+</head>
+	<body>
+	  <div id="app">
+    <div id="canvasWrap">
+	      <canvas id="scene"></canvas>
+	      <div id="hud" data-mode="menu">
+	        <button id="visualToggle" type="button" aria-label="Toggle visuals">
+	          Visuals <span class="pill" id="visualToggleLabel">GLTF</span>
+	        </button>
+	        <div id="playerPanels"></div>
+
+        <div id="timerPanel">
+          <div id="timer">TIME: 01:45</div>
+          <div id="roundPips">
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+
+	        <div id="bottomBar">
+		          <div id="controls" class="panel">WASD Move · Mouse Aim · Click/Hold Fire · 1/2/3 Switch · E Kick · Space Dash · R Reload · G Grenade · Tab Leaderboard · P Pause · V Visuals</div>
+	          <div id="dash">Dash<div class="cooldown"></div></div>
+	        </div>
+
+        <div id="banner">ROUND 1 · FIGHT!</div>
+        <div id="suddenDeath">SUDDEN DEATH</div>
+
+	        <div id="menuOverlay" class="overlay visible">
+	          <h1>Tiny Toon Duel</h1>
+	          <div class="subtitle" id="modeSubtitle">Fast, tight 1v1 duel in a tiny arena.</div>
+	          <div class="modeSelect">
+	            <button class="modeBtn" data-mode="duel">1v1 Duel</button>
+	            <button class="modeBtn" data-mode="deathmatch">4-Player FFA</button>
+	          </div>
+	          <div class="rules" id="modeRules">Best of 5 · 1:45 time limit · Barrels hurt both players</div>
+	          <div class="difficultySelect" id="difficultySelect">
+	            <div class="difficultyLabel" id="difficultyLabel">AI Difficulty</div>
+	            <div class="difficultyButtons">
+	              <button class="difficultyBtn" data-diff="easy" type="button">Easy</button>
+	              <button class="difficultyBtn" data-diff="normal" type="button">Normal</button>
+	              <button class="difficultyBtn" data-diff="hard" type="button">Hard</button>
+	            </div>
+	          </div>
+	          <div class="statLine">Press <strong>Enter</strong> to Start</div>
+	          <div id="bestTime">Best win time: --</div>
+	        </div>
+
+        <div id="pauseOverlay" class="overlay">
+          <h1>Paused</h1>
+          <div class="subtitle">Press P / Esc to resume</div>
+        </div>
+
+        <div id="matchOverlay" class="overlay">
+          <h1 id="matchTitle">Player 1 Wins!</h1>
+          <div class="subtitle" id="matchStats">Match time: 00:00</div>
+          <div class="rules">Press Enter to Rematch</div>
+          <div id="bestTimeEnd">Best win time: --</div>
+        </div>
+
+        <div id="leaderboardOverlay" class="overlay">
+          <h1>Leaderboard</h1>
+          <div class="leaderboardList" id="leaderboardList"></div>
+          <div class="rules">Hold Tab to view</div>
+        </div>
+
+        <div id="nearMissFlash"></div>
+        <div id="hitFlash"></div>
+        <div id="vignette"></div>
+        <div id="lowHpVignette"></div>
+        <div id="dramaticOverlay"></div>
+        <div id="popups"></div>
+        <div id="killCamText">ELIMINATED</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

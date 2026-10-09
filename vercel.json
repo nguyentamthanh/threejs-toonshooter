@@ -1,7 +1,9 @@
 {
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,
-  "outputDirectory": "public",
   "headers": [
     {
       "source": "/assets/(.*)",

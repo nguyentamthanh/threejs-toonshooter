@@ -1,6 +1,6 @@
 # Tiny Toon Duel (Three.js)
 
-A quick-action toon shooter prototype built with Three.js. This repo is structured for static hosting (Vercel-ready) with a lightweight landing page that links to the game.
+A quick-action toon shooter built with Three.js and Vite. Duel 1v1 or 4-player deathmatch against AI, playable in the browser.
 
 <p align="center">
   <img src="public/toonshooter/design-markedup.jpeg" alt="Tiny Toon Duel design" width="720" />
@@ -9,40 +9,37 @@ A quick-action toon shooter prototype built with Three.js. This repo is structur
 ## Project Layout
 
 ```
+index.html                  # Landing page
+toonshooter/index.html      # Game page (markup only)
+src/
+├─ main.js                  # Game script (being split into modules)
+└─ styles.css               # Game styles
 public/
-├─ index.html               # Landing page
 ├─ assets.json              # Asset manifest (loaded by the game)
 ├─ assets/                  # GLTF models / textures referenced by the manifest
-└─ toonshooter/
-   └─ index.html            # Main Three.js experience
-vercel.json                 # Static hosting config (clean URLs, caching)
+└─ toonshooter/             # Static images for the landing page
+vite.config.js              # Multi-page build (landing + game)
+vercel.json                 # Vercel build/output config (clean URLs, caching)
 ```
-
-Anything under `public/` is deployable as-is.
 
 ## Running Locally
 
 ```bash
-npm install -g serve   # or use npx serve
-serve public
+npm install
+npm run dev      # http://localhost:5173/ (landing) and /toonshooter/ (game)
+npm run build    # outputs to dist/
+npm test         # unit tests (Vitest)
 ```
-
-Then visit:
-- `http://localhost:3000/` — landing page
-- `http://localhost:3000/toonshooter/` — game (loads `/assets.json` and `/assets/**` from the same origin)
 
 ## Deployment (Vercel)
 
-1. In the Vercel dashboard, create a project from this repo.
-2. Framework preset: **Other**. Leave the build command empty.
-3. Set the output directory to `public` (or rely on `vercel.json` which declares it).
-4. Deploy. Clean URLs are enabled, so `/toonshooter` and `/toonshooter/` both work. Static assets in `/assets` are cached with `Cache-Control: public,max-age=31536000,immutable`.
+Framework preset: **Vite**. Build command `npm run build`, output directory `dist` (declared in `vercel.json`). Clean URLs are enabled, so `/toonshooter` and `/toonshooter/` both work. Files under `/assets` are cached with `Cache-Control: public,max-age=31536000,immutable`.
 
 ## Asset Management
 
-- `public/assets.json` is the single source of truth for model paths. `public/toonshooter/index.html` fetches it and resolves URLs at runtime.
+- `public/assets.json` is the single source of truth for model paths. The game fetches it at runtime and resolves URLs relative to the game page.
 - When adding or pruning models, update the manifest so the scene and assets stay aligned.
 
 ## Local Dev Notes
 
-- Optional Three.js workflow references live in `.claude/skills/threejs-builder/` (not deployed; safe to keep in a public repo).
+- Optional Three.js workflow references live in `.claude/skills/threejs-builder/` (not deployed).
