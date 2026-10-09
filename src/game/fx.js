@@ -4,6 +4,43 @@ import { canvas } from './dom.js';
 import { fx, world } from './state.js';
 import { getTeamColor } from './util.js';
 
+// Geometry/texture shared by every effect instance (sized via mesh scale),
+// so spawning an effect no longer allocates and later disposes GPU buffers.
+const SHARED = {
+  sphere: new THREE.SphereGeometry(1, 6, 6),
+  box: new THREE.BoxGeometry(1, 1, 1),
+  tracer: new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 1)]),
+  spriteMap: null
+};
+
+function getSpriteMap() {
+  if (!SHARED.spriteMap) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(16, 16, 10, 0, Math.PI * 2);
+    ctx.fill();
+    SHARED.spriteMap = new THREE.CanvasTexture(canvas);
+  }
+  return SHARED.spriteMap;
+}
+
+// Remove finished entries in place instead of allocating a new array each frame.
+function compact(list, update) {
+  let write = 0;
+  for (let read = 0; read < list.length; read += 1) {
+    const item = list[read];
+    if (update(item)) {
+      list[write] = item;
+      write += 1;
+    }
+  }
+  list.length = write;
+}
+
     export function spawnCoverDebris(cover, sourceTeam) {
       const color = getTeamColor(sourceTeam);
       const center = cover.mesh ? cover.mesh.position.clone() : new THREE.Vector3(
@@ -14,9 +51,9 @@ import { getTeamColor } from './util.js';
       const pieces = 8;
       for (let i = 0; i < pieces; i++) {
         const size = 0.12 + Math.random() * 0.16;
-        const geometry = new THREE.BoxGeometry(size, size, size);
         const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85 });
-        const piece = new THREE.Mesh(geometry, material);
+        const piece = new THREE.Mesh(SHARED.box, material);
+        piece.scale.setScalar(size);
         piece.position.copy(center);
         piece.position.y = 0.6 + Math.random() * 0.8;
         const angle = Math.random() * Math.PI * 2;
@@ -40,13 +77,13 @@ import { getTeamColor } from './util.js';
       for (let i = 0; i < particleCount; i++) {
         // Create small blood/impact particle
         const size = 0.08 + Math.random() * 0.12;
-        const geometry = new THREE.SphereGeometry(size, 6, 6);
         const material = new THREE.MeshBasicMaterial({
           color: isDeath ? 0xcc2222 : color,
           transparent: true,
           opacity: 0.9
         });
-        const particle = new THREE.Mesh(geometry, material);
+        const particle = new THREE.Mesh(SHARED.sphere, material);
+        particle.scale.setScalar(size);
 
         // Start at hit position
         particle.position.copy(position);
@@ -74,13 +111,13 @@ import { getTeamColor } from './util.js';
     export function spawnExplosionSparks(position, count = 16, color = 0xffc44d) {
       for (let i = 0; i < count; i++) {
         const size = 0.06 + Math.random() * 0.09;
-        const geometry = new THREE.SphereGeometry(size, 6, 6);
         const material = new THREE.MeshBasicMaterial({
           color,
           transparent: true,
           opacity: 0.95
         });
-        const particle = new THREE.Mesh(geometry, material);
+        const particle = new THREE.Mesh(SHARED.sphere, material);
+        particle.scale.setScalar(size);
 
         particle.position.copy(position);
         particle.position.y = 0.25 + Math.random() * 0.6;
@@ -192,7 +229,6 @@ import { getTeamColor } from './util.js';
 
 
     export function spawnTracer(start, end, color = COLORS.tracer, life = 0.05, options = null) {
-      const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
       const opacity = options?.opacity ?? 1;
       const additive = options?.additive ?? false;
       const material = new THREE.LineBasicMaterial({
@@ -202,7 +238,11 @@ import { getTeamColor } from './util.js';
         blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
         depthWrite: false
       });
-      const line = new THREE.Line(geometry, material);
+      // Shared unit line along +Z, positioned/rotated/scaled to span start -> end.
+      const line = new THREE.Line(SHARED.tracer, material);
+      line.position.copy(start);
+      line.lookAt(end);
+      line.scale.z = start.distanceTo(end);
       line.userData.life = life;
       line.renderOrder = additive ? 10 : 0;
       world.scene.add(line);
@@ -211,11 +251,10 @@ import { getTeamColor } from './util.js';
 
 
     export function updateTracers(dt) {
-      world.fxLines = world.fxLines.filter((line) => {
+      compact(world.fxLines, (line) => {
         line.userData.life -= dt;
         if (line.userData.life <= 0) {
           world.scene.remove(line);
-          line.geometry.dispose();
           line.material.dispose();
           return false;
         }
@@ -225,16 +264,7 @@ import { getTeamColor } from './util.js';
 
 
     export function createSprite(color, size) {
-      const canvas = document.createElement('canvas');
-      canvas.width = 32;
-      canvas.height = 32;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = 'white';
-      ctx.beginPath();
-      ctx.arc(16, 16, 10, 0, Math.PI * 2);
-      ctx.fill();
-      const texture = new THREE.CanvasTexture(canvas);
-      const material = new THREE.SpriteMaterial({ color, map: texture, transparent: true, opacity: 0.9 });
+      const material = new THREE.SpriteMaterial({ color, map: getSpriteMap(), transparent: true, opacity: 0.9 });
       const sprite = new THREE.Sprite(material);
       sprite.scale.set(size, size, size);
       return sprite;
@@ -251,13 +281,12 @@ import { getTeamColor } from './util.js';
 
 
     export function updateSprites(dt) {
-      world.fxSprites = world.fxSprites.filter((sprite) => {
+      compact(world.fxSprites, (sprite) => {
         sprite.userData.life -= dt;
         sprite.material.opacity = Math.max(0, sprite.userData.life / 0.4);
         sprite.scale.multiplyScalar(1 + dt * 1.5);
         if (sprite.userData.life <= 0) {
           world.scene.remove(sprite);
-          sprite.material.map.dispose();
           sprite.material.dispose();
           return false;
         }
@@ -268,7 +297,7 @@ import { getTeamColor } from './util.js';
 
     export function updateParticles(dt) {
       const gravity = -15;
-      world.fxParticles = world.fxParticles.filter((particle) => {
+      compact(world.fxParticles, (particle) => {
         particle.userData.life -= dt;
         // Apply gravity
         particle.userData.velocity.y += gravity * dt;
@@ -287,7 +316,6 @@ import { getTeamColor } from './util.js';
 
         if (particle.userData.life <= 0) {
           world.scene.remove(particle);
-          particle.geometry.dispose();
           particle.material.dispose();
           return false;
         }

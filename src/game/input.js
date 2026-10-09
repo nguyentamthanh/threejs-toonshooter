@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { tryDash, tryKick, tryThrowGrenade } from './actions.js';
 import { startReload } from './combat.js';
-import { CONFIG, MODEL_YAW_OFFSET } from './config.js';
+import { CONFIG, MODEL_YAW_OFFSET, WEAPON_IDS } from './config.js';
 import { canvas } from './dom.js';
 import { requestWeaponSwitch } from './entities.js';
 import { startMatch, togglePause } from './match.js';
@@ -40,9 +40,9 @@ import { setVisualMode } from './visuals.js';
         }
 	        if (state.mode === 'playing') {
 	          const player = getPlayer();
-	          if (event.code === 'Digit1') requestWeaponSwitch(player, 'pistol');
-	          if (event.code === 'Digit2') requestWeaponSwitch(player, 'smg');
-	          if (event.code === 'Digit3') requestWeaponSwitch(player, 'shotgun');
+	          const slot = /^Digit([1-9])$/.exec(event.code);
+	          const slotWeapon = slot ? WEAPON_IDS[Number(slot[1]) - 1] : null;
+	          if (slotWeapon) requestWeaponSwitch(player, slotWeapon);
 	          if (event.code === 'KeyE' || event.code === 'KeyF') tryKick(player);
 	          if (event.code === 'KeyG' && !event.repeat) tryThrowGrenade(player);
 	        }
@@ -55,17 +55,23 @@ import { setVisualMode } from './visuals.js';
         }
       });
 
+      // Touch input goes through the virtual sticks (touch.js), not the mouse path.
       window.addEventListener('pointerdown', (event) => {
+        if (event.pointerType === 'touch') return;
         input.mouse.down = true;
         input.mouse.justPressed = true;
         updatePointer(event);
       });
 
-      window.addEventListener('pointerup', () => {
+      window.addEventListener('pointerup', (event) => {
+        if (event.pointerType === 'touch') return;
         input.mouse.down = false;
       });
 
-      window.addEventListener('pointermove', updatePointer);
+      window.addEventListener('pointermove', (event) => {
+        if (event.pointerType === 'touch') return;
+        updatePointer(event);
+      });
     }
 
 
@@ -95,10 +101,34 @@ import { setVisualMode } from './visuals.js';
 
 
     export function getAimPoint() {
+      if (input.touch.enabled) return getTouchAimPoint();
       raycaster.setFromCamera({ x: input.mouse.x, y: input.mouse.y }, world.camera);
       const point = new THREE.Vector3();
       const hit = raycaster.ray.intersectPlane(groundPlane, point);
       if (!hit) return null;
+      point.x = THREE.MathUtils.clamp(point.x, CONFIG.arena.bounds.minX, CONFIG.arena.bounds.maxX);
+      point.z = THREE.MathUtils.clamp(point.z, CONFIG.arena.bounds.minZ, CONFIG.arena.bounds.maxZ);
+      return point;
+    }
+
+
+    // Aim point for touch play: along the aim stick, or straight ahead of the
+    // player's current facing when the stick is released.
+    function getTouchAimPoint() {
+      const player = getPlayer();
+      if (!player) return null;
+      const dir = new THREE.Vector3(Math.sin(player.yaw), 0, Math.cos(player.yaw));
+      const { aim } = input.touch;
+      if (aim.active && Math.hypot(aim.x, aim.y) > 0.1) {
+        const forward = new THREE.Vector3();
+        world.camera.getWorldDirection(forward);
+        forward.y = 0;
+        forward.normalize();
+        const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+        dir.copy(forward).multiplyScalar(aim.y).addScaledVector(right, aim.x).normalize();
+      }
+      const point = player.position.clone().addScaledVector(dir, 8);
+      point.y = 0;
       point.x = THREE.MathUtils.clamp(point.x, CONFIG.arena.bounds.minX, CONFIG.arena.bounds.maxX);
       point.z = THREE.MathUtils.clamp(point.z, CONFIG.arena.bounds.minZ, CONFIG.arena.bounds.maxZ);
       return point;
@@ -126,6 +156,10 @@ import { setVisualMode } from './visuals.js';
       if (input.keys['KeyS']) dir.sub(forward);
       if (input.keys['KeyA']) dir.sub(right);
       if (input.keys['KeyD']) dir.add(right);
+      const { move } = input.touch;
+      if (dir.lengthSq() === 0 && Math.hypot(move.x, move.y) > 0.12) {
+        dir.addScaledVector(forward, move.y).addScaledVector(right, move.x);
+      }
       if (dir.lengthSq() > 0) dir.normalize();
       return dir;
     }

@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { cloneAsset, computeMeshBounds, normalizeToHeight } from './assets.js';
 import { BASE_ARENA, COLORS, CONFIG } from './config.js';
+import { clearHazards, spawnHazards } from './hazards.js';
+import { getMap } from './maps.js';
 import { clearGrenades } from './pickups.js';
 import { assets, world } from './state.js';
 import { markPlaceholder } from './visuals.js';
@@ -13,6 +15,7 @@ import { markPlaceholder } from './visuals.js';
         if (barrel.mesh) world.scene.remove(barrel.mesh);
       });
       clearGrenades();
+      clearHazards();
       world.spilledBarrels.forEach((mesh) => {
         world.scene.remove(mesh);
       });
@@ -53,88 +56,10 @@ import { markPlaceholder } from './visuals.js';
 	      world.arenaObjects.push(border);
 	      world.arenaDecor = [];
 
-      // Main cover placements - collide-able obstacles
-      const placements = [
-        // Center major occluder - Tank (permanent cover)
-        { key: 'Tank', pos: [0, 0, -0.6], rot: Math.PI * 0.6, collide: true },
-
-        // Safe spawn cover (permanent)
-        { key: 'Barrier_Large', pos: [-11.2, 0, -4.2], rot: Math.PI / 2, collide: true },
-        { key: 'Barrier_Large', pos: [-11.2, 0, 4.2], rot: Math.PI / 2, collide: true },
-        { key: 'Barrier_Large', pos: [11.2, 0, -4.2], rot: -Math.PI / 2, collide: true },
-        { key: 'Barrier_Large', pos: [11.2, 0, 4.2], rot: -Math.PI / 2, collide: true },
-
-        // Permanent lane anchors
-        { key: 'SackTrench', pos: [-7.4, 0, 0.8], rot: 0, collide: true },
-        { key: 'SackTrench', pos: [7.4, 0, -0.8], rot: Math.PI, collide: true },
-        { key: 'Container_Small', pos: [-10.2, 0, -7.2], rot: 0.1, collide: true },
-        { key: 'Container_Small', pos: [10.2, 0, 7.2], rot: -Math.PI + 0.1, collide: true },
-        { key: 'Structure_1', pos: [-10.3, 0, 7.1], rot: 0, collide: true },
-        { key: 'Structure_1', pos: [10.3, 0, -7.1], rot: Math.PI, collide: true },
-
-        // Mid-map destructible cover (opens up over the match)
-        { key: 'Crate', pos: [-3.2, 0, 0], rot: 0.2, collide: true },
-        { key: 'Crate', pos: [3.2, 0, 0], rot: -0.2, collide: true },
-        { key: 'Crate', pos: [0, 0, 5.1], rot: 0.5, collide: true },
-        { key: 'Crate', pos: [0, 0, -5.1], rot: -0.4, collide: true },
-        { key: 'Pallet', pos: [-6.2, 0, -1.6], rot: 0.15, collide: true },
-        { key: 'Pallet', pos: [6.2, 0, 1.6], rot: -0.15, collide: true },
-        { key: 'Sofa', pos: [-8.3, 0, 5.9], rot: Math.PI / 4, collide: true },
-        { key: 'Sofa', pos: [8.3, 0, -5.9], rot: -Math.PI / 4, collide: true },
-        { key: 'CardboardBoxes_2', pos: [-2.2, 0, -6.6], rot: 0.2, collide: true },
-        { key: 'CardboardBoxes_3', pos: [2.2, 0, 6.6], rot: -0.2, collide: true }
-      ];
-
-      // Decorative props - non-colliding clutter for visual density
-      const decorativePlacements = [
-        // Cardboard boxes clusters scattered around
-        { key: 'CardboardBoxes_1', pos: [-11, 0, 5], rot: 0.3 },
-        { key: 'CardboardBoxes_2', pos: [11, 0, -5], rot: -0.4 },
-        { key: 'CardboardBoxes_3', pos: [-2, 0, -7], rot: 0.1 },
-        { key: 'CardboardBoxes_4', pos: [2, 0, 7], rot: -0.2 },
-        { key: 'CardboardBoxes_1', pos: [5, 0, -6], rot: 0.6 },
-        { key: 'CardboardBoxes_2', pos: [-5, 0, 6], rot: -0.5 },
-        // Tires scattered
-        { key: 'Debris_Tires', pos: [4, 0, -3], rot: 0 },
-        { key: 'Debris_Tires', pos: [-4, 0, -5], rot: Math.PI / 3 },
-        { key: 'Debris_Tires', pos: [8, 0, 2], rot: 0.8 },
-        // Traffic cones marking areas
-        { key: 'TrafficCone', pos: [-2, 0, -2], rot: 0 },
-        { key: 'TrafficCone', pos: [2, 0, 2], rot: 0 },
-        { key: 'TrafficCone', pos: [-9, 0, 0], rot: 0.2 },
-        { key: 'TrafficCone', pos: [9, 0, 0], rot: -0.1 },
-        { key: 'TrafficCone', pos: [0, 0, -8], rot: 0.3 },
-        { key: 'TrafficCone', pos: [0, 0, 8], rot: -0.2 },
-        // Debris piles
-        { key: 'Debris_Pile', pos: [-10, 0, 2], rot: 0.5 },
-        { key: 'Debris_Pile', pos: [10, 0, -2], rot: -0.3 },
-        { key: 'Debris_Pile', pos: [3, 0, -4], rot: 0.7 },
-        // Paper debris scattered
-        { key: 'Debris_Papers_1', pos: [-1, 0, -3], rot: 0.8 },
-        { key: 'Debris_Papers_2', pos: [1, 0, 3], rot: -0.6 },
-        { key: 'Debris_Papers_3', pos: [-6, 0, -2], rot: 0.4 },
-        // Gas cans
-        { key: 'GasCan', pos: [-7, 0, -4], rot: 0.2 },
-        { key: 'GasCan', pos: [7, 0, 4], rot: -0.3 },
-        // Wood planks
-        { key: 'WoodPlanks', pos: [-3, 0, 4], rot: 0.6 },
-        { key: 'WoodPlanks', pos: [3, 0, -4], rot: -0.5 },
-        // Broken pallets
-        { key: 'Pallet_Broken', pos: [9, 0, -4], rot: 0.3 },
-        { key: 'Pallet_Broken', pos: [-9, 0, 4], rot: -0.4 },
-        // Pipes near edges
-        { key: 'Pipes', pos: [-12, 0, 0], rot: Math.PI / 2 },
-        { key: 'Pipes', pos: [12, 0, 0], rot: -Math.PI / 2 },
-        // Trash containers at edges
-        { key: 'TrashContainer', pos: [-12, 0, -6], rot: 0.1 },
-        { key: 'TrashContainer_Open', pos: [12, 0, 6], rot: -0.1 },
-        // Street lights for atmosphere
-        { key: 'StreetLight', pos: [-12, 0, 4], rot: 0 },
-        { key: 'StreetLight', pos: [12, 0, -4], rot: Math.PI },
-        // Signs
-        { key: 'Sign', pos: [-11, 0, 7], rot: -0.2 },
-        { key: 'Sign', pos: [11, 0, -7], rot: 0.3 }
-      ];
+      // Layout data lives in maps.js; the selected map is state.mapId.
+      const map = getMap();
+      const placements = map.cover;
+      const decorativePlacements = map.decor;
 
       const fallbackSizes = {
         Tank: [4.5, 2.5, 3.0],
@@ -287,6 +212,7 @@ import { markPlaceholder } from './visuals.js';
 	      world.arenaLayout = { decorativePlacements, fallbackSizes, fenceSegments };
 
 	      spawnBarrels();
+	      spawnHazards();
 
 	      buildCoverNodes();
 	    }
@@ -327,11 +253,7 @@ import { markPlaceholder } from './visuals.js';
       const manifest = assets.manifest.assets.toonshooter;
       const barrelPath = manifest.environment.ExplodingBarrel;
       const barrelClone = cloneAsset(barrelPath);
-      const barrelPositions = [
-        new THREE.Vector3(-8.2, 0, -6.5),
-        new THREE.Vector3(8.2, 0, 6.5),
-        new THREE.Vector3(0, 0, 7.0)
-      ];
+      const barrelPositions = getMap().barrels.map(([x, y, z]) => new THREE.Vector3(x, y, z));
 
 	      barrelPositions.forEach((pos) => {
 	        const barrelRoot = barrelClone ? normalizeToHeight(barrelClone.root.clone(true), null) : null;

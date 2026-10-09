@@ -1,6 +1,14 @@
 # Tiny Toon Duel (Three.js)
 
-A quick-action toon shooter built with Three.js and Vite. Duel 1v1 or 4-player deathmatch against AI, playable in the browser.
+A quick-action toon shooter built with Three.js and Vite. Duel 1v1 or 4-player deathmatch against AI, playable in the browser on desktop or phone.
+
+- 6 weapons (pistol, SMG, shotgun, rifle, sniper, rocket launcher) + grenades and kicks
+- 3 arenas (Junkyard, Depot, Barricades) with landmines and bear traps
+- Two fighter skins (Soldier, Hazmat)
+- Procedural sound effects and music (Web Audio, no audio files)
+- Touch controls: left stick moves, right stick aims and fires, buttons for dash / reload / grenade / kick / swap
+
+Desktop controls: WASD move · mouse aim · click/hold fire · 1-6 switch weapon · E kick · Space dash · R reload · G grenade · Tab leaderboard · P pause · V visuals · M sound.
 
 <p align="center">
   <img src="public/toonshooter/design-markedup.jpeg" alt="Tiny Toon Duel design" width="720" />
@@ -12,8 +20,17 @@ A quick-action toon shooter built with Three.js and Vite. Duel 1v1 or 4-player d
 index.html                  # Landing page
 toonshooter/index.html      # Game page (markup only)
 src/
-├─ main.js                  # Game script (being split into modules)
-└─ styles.css               # Game styles
+├─ main.js                  # Boot: renderer, input, assets, menu, loop
+├─ styles.css               # Game styles (HUD, menus, touch controls)
+└─ game/
+   ├─ config.js             # Tuning + weapon table (one entry per weapon)
+   ├─ maps.js               # Arena layouts: cover, decor, barrels, hazards
+   ├─ state.js              # Shared state (input, match, world, settings)
+   ├─ events.js / timers.js # Event bus, pause-aware game-flow timers
+   ├─ combat.js, ai.js, player.js, actions.js, hazards.js, pickups.js
+   ├─ audio.js, touch.js, hud.js, menu.js, match.js, loop.js
+   └─ arena.js, entities.js, visuals.js, fx.js, camera.js, collision.js, ...
+tests/                      # Vitest: collision, timers/events/util, content data checks
 public/
 ├─ assets.json              # Asset manifest (loaded by the game)
 ├─ assets/                  # GLTF models / textures referenced by the manifest

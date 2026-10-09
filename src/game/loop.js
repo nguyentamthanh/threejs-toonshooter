@@ -5,6 +5,7 @@ import { CONFIG } from './config.js';
 import { dramaticOverlay, hitFlash, nearMissFlash } from './dom.js';
 import { updateMixers } from './entities.js';
 import { updateCharacterFlash, updateParticles, updateSprites, updateTracers } from './fx.js';
+import { updateHazards } from './hazards.js';
 import { updateHUD, updateMuzzleFlash, updatePopups } from './hud.js';
 import { updateKillCam, updateTimer } from './match.js';
 import { getDifficultyForMode } from './menu.js';
@@ -12,12 +13,16 @@ import { updateFallingCrates, updatePickups, updateSkyDrops } from './pickups.js
 import { updatePlayer } from './player.js';
 import { updateCoverStates, updateGrenades, updateRollingBarrels } from './simulation.js';
 import { fx, input, state, world } from './state.js';
+import { updateScheduled } from './timers.js';
+import { updateTouchInput } from './touch.js';
 import { getSimTimeScale } from './util.js';
 
     export function animate() {
       requestAnimationFrame(animate);
       const rawDt = world.clock.getDelta();
       updateFxTimers(rawDt);
+      updateScheduled(rawDt);
+      updateTouchInput();
 
       if (state.mode === 'killCam') {
         updateKillCam(rawDt);
@@ -94,6 +99,7 @@ import { getSimTimeScale } from './util.js';
 	      updateRollingBarrels(scaledDt);
 	      updateCoverStates(scaledDt);
 	      updateGrenades(scaledDt);
+      updateHazards(scaledDt);
       world.entities.forEach((entity) => {
         if (!entity || entity.eliminated) return;
         if (entity.isAI) {

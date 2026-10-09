@@ -7,6 +7,7 @@ import { getActiveWeaponConfig, getWeaponState, updateAnimationState } from './e
 import { createSprite, flashCharacter, playDeathAnimation, setTimeScale, spawnCoverDebris, spawnExplosion, spawnExplosionSparks, spawnHitEffect, spawnTracer, triggerMuzzle, triggerRecoil, triggerShootAnimation } from './fx.js';
 import { spawnPopup } from './hud.js';
 import { getAiTuning } from './loop.js';
+import { emit } from './events.js';
 import { endMatch, endRound, triggerKillCam } from './match.js';
 import { spawnWeaponPickup } from './pickups.js';
 import { assets, fx, state, world } from './state.js';
@@ -35,6 +36,7 @@ import { getEntityByTeam, getFallbackOpponentTeam, moveToward } from './util.js'
       let closestMissEnd = null;
       let closestMissTarget = null;
       let knockApplied = false;
+      let lastShotEnd = null;
 
       for (let i = 0; i < pellets; i++) {
         const spreadBase = isAI ? weapon.spreadAI : weapon.spreadPlayer;
@@ -77,6 +79,7 @@ import { getEntityByTeam, getFallbackOpponentTeam, moveToward } from './util.js'
 
         const endT = hitT !== null ? hitT : 1;
         const shotEnd = origin.clone().lerp(end, endT);
+        lastShotEnd = shotEnd;
 
         const isShotgun = pellets > 1;
         const drawTracer = isShotgun || pellets === 1 || i < 3;
@@ -121,6 +124,17 @@ import { getEntityByTeam, getFallbackOpponentTeam, moveToward } from './util.js'
       const fireRate = fireRateBase * (isAI ? (aiTuning?.aiFireRateMul ?? 1) : 1);
       attacker.fireCooldown = 1 / fireRate;
       weaponState.ammo -= 1;
+      emit('shot', { entity: attacker, weaponId: attacker.weapon.id, isAI: !!isAI, didHit });
+      if (!isAI) {
+        // Heavier weapons kick the camera harder; landing a hit adds a little extra.
+        const kick = weapon.shake ?? 0.07;
+        fx.shakeTime = Math.max(fx.shakeTime, 0.05 + kick * 0.45);
+        fx.shakeIntensity = Math.max(fx.shakeIntensity, didHit ? kick * 1.4 : kick);
+      }
+      if (weapon.explosion && lastShotEnd) {
+        lastShotEnd.y = 0.2;
+        explodeAt(lastShotEnd, attacker.team, weapon.explosion, 'rocket');
+      }
 
       if (!didHit && closestMissEnd && closestMissTarget) {
         checkNearMiss(origin, closestMissEnd, closestMissTarget);
@@ -139,6 +153,7 @@ import { getEntityByTeam, getFallbackOpponentTeam, moveToward } from './util.js'
       if (state.reserve <= 0) return;
       state.reloadTimer = weapon.reload;
       updateAnimationState(entity, 'reload');
+      emit('reload', { entity });
     }
 
 
@@ -186,6 +201,7 @@ import { getEntityByTeam, getFallbackOpponentTeam, moveToward } from './util.js'
       spawnHitEffect(target.position, target.team);
       // Flash the character red briefly
       flashCharacter(target, 0.15);
+      emit('hit', { target, amount, attacker, weapon });
 
       if (target.hp <= 0) {
         handleEntityDeath(target, sourceTeam, attacker, shotStart, shotEnd);
@@ -200,6 +216,7 @@ import { getEntityByTeam, getFallbackOpponentTeam, moveToward } from './util.js'
       spawnHitEffect(target.position, target.team, true);
       fx.shakeTime = 0.3;
       fx.shakeIntensity = 0.55;
+      emit('death', { target, attacker });
       if (attacker) {
         state.lastKill = {
           shooterTeam: attacker.team,
@@ -306,6 +323,7 @@ import { getEntityByTeam, getFallbackOpponentTeam, moveToward } from './util.js'
       if (!cover || cover.active === false) return;
       cover.active = false;
       if (cover.mesh) cover.mesh.visible = false;
+      emit('coverBreak', { cover });
       spawnCoverDebris(cover, sourceTeam);
       maybeSpawnCoverPickup(cover);
       buildCoverNodes();
@@ -382,6 +400,7 @@ import { getEntityByTeam, getFallbackOpponentTeam, moveToward } from './util.js'
       barrel.isRolling = false;
       barrel.rollTimer = 0;
       spawnExplosion(barrel.position);
+      emit('explosion', { kind: 'barrel', position: barrel.position });
       fx.shakeTime = 0.22;
       fx.shakeIntensity = 0.35;
 
@@ -419,8 +438,17 @@ import { getEntityByTeam, getFallbackOpponentTeam, moveToward } from './util.js'
 	      if (!grenade) return;
 	      const pos = grenade.position ? grenade.position.clone() : grenade.mesh?.position?.clone?.();
 	      if (!pos) return;
+	      explodeAt(pos, grenade.sourceTeam || null, CONFIG.grenade, 'grenade');
+	      if (grenade.mesh) world.scene.remove(grenade.mesh);
+	      grenade.mesh = null;
+	    }
 
+
+	    // Shared blast used by grenades, rockets and landmines. `params` provides
+	    // explosionRadius, maxDamage, knockback and stun (see CONFIG.grenade).
+	    export function explodeAt(pos, sourceTeam, params, kind) {
 	      spawnExplosion(pos);
+	      emit('explosion', { kind, position: pos });
 	      spawnExplosionSparks(pos, 18, 0xffb13d);
 
 	      const blast = createSprite(0xffb13d, 2.6);
@@ -443,12 +471,11 @@ import { getEntityByTeam, getFallbackOpponentTeam, moveToward } from './util.js'
 	      fx.shakeTime = Math.max(fx.shakeTime, 0.42);
 	      fx.shakeIntensity = Math.max(fx.shakeIntensity, 0.85);
 
-	      const sourceTeam = grenade.sourceTeam || null;
 	      const attacker = sourceTeam ? getEntityByTeam(sourceTeam) : null;
-	      const radius = CONFIG.grenade.explosionRadius;
-	      const maxDamage = CONFIG.grenade.maxDamage;
-	      const maxKnock = CONFIG.grenade.knockback;
-	      const maxStun = CONFIG.grenade.stun;
+	      const radius = params.explosionRadius;
+	      const maxDamage = params.maxDamage;
+	      const maxKnock = params.knockback;
+	      const maxStun = params.stun;
 
       world.entities.forEach((entity) => {
         if (!entity || entity.isDead || entity.eliminated) return;
@@ -497,8 +524,6 @@ import { getEntityByTeam, getFallbackOpponentTeam, moveToward } from './util.js'
 	        applyCoverDamage(cover, maxDamage * 0.45 * falloff, sourceTeam || null);
 	      });
 
-	      if (grenade.mesh) world.scene.remove(grenade.mesh);
-	      grenade.mesh = null;
 	    }
 
 

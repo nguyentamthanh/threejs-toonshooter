@@ -53,7 +53,7 @@ import { state, world } from './state.js';
 
         const canFire = enemy.weapon.switchTimer <= 0 && weaponState.reloadTimer <= 0;
         if (enemy.ai.fireIntent && canFire && enemy.fireCooldown <= 0) {
-          if (enemy.weapon.id === 'smg') {
+          if (weapon.auto) {
             // Burst fire: AI fires 3-5 shots then pauses
             if (enemy.ai.burstCooldown <= 0) {
               attemptFire(enemy, getAimDirection(enemy, player.position), true);
@@ -134,11 +134,12 @@ import { state, world } from './state.js';
       const dist = Math.hypot(toPlayer.x, toPlayer.z);
       const hasLoS = hasLineOfSight(enemy.position, player.position);
 
+      // Rockets are kept out of close range so the AI doesn't blow itself up.
       const preference = dist < 9
-        ? ['shotgun', 'smg', 'pistol']
+        ? ['shotgun', 'ak', 'smg', 'pistol', 'sniper']
         : dist > 22
-          ? ['pistol', 'smg', 'shotgun']
-          : ['smg', 'pistol', 'shotgun'];
+          ? ['sniper', 'rocket', 'pistol', 'ak', 'smg', 'shotgun']
+          : ['ak', 'rocket', 'smg', 'sniper', 'pistol', 'shotgun'];
       const desiredWeapon = preference.find((id) => canUseWeapon(enemy, id)) || enemy.weapon.id;
       if (desiredWeapon !== enemy.weapon.id && enemy.weapon.switchTimer <= 0) {
         requestWeaponSwitch(enemy, desiredWeapon);
@@ -150,7 +151,8 @@ import { state, world } from './state.js';
       }
 
       const activeWeapon = getActiveWeaponConfig(enemy);
-      enemy.ai.fireIntent = hasLoS && dist < activeWeapon.range;
+      const tooCloseToBlast = activeWeapon.explosion && dist < activeWeapon.explosion.explosionRadius + 1;
+      enemy.ai.fireIntent = hasLoS && dist < activeWeapon.range && !tooCloseToBlast;
 
       if (enemy.hp <= 35) {
         enemy.ai.desiredMove = moveToCover(enemy, player, true);

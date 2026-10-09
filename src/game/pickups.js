@@ -3,6 +3,7 @@ import { cloneAsset, normalizeToHeight } from './assets.js';
 import { rollWeaponDrop, startReload } from './combat.js';
 import { COLORS, CONFIG } from './config.js';
 import { getWeaponState } from './entities.js';
+import { emit } from './events.js';
 import { spawnPopup } from './hud.js';
 import { assets, fx, state, world } from './state.js';
 import { markPlaceholder } from './visuals.js';
@@ -32,11 +33,8 @@ import { markPlaceholder } from './visuals.js';
 	    export function createPickupMesh(weaponId, { ignorePlaceholders = false } = {}) {
 	      const group = new THREE.Group();
 	      const manifest = assets.manifest.assets.toonshooter;
-	      const gunPath = weaponId === 'pistol'
-	        ? manifest.guns.Pistol
-	        : weaponId === 'smg'
-	          ? manifest.guns.SMG
-	          : manifest.guns.Shotgun;
+	      const weapon = CONFIG.weapons[weaponId];
+	      const gunPath = weapon ? manifest.guns[weapon.model] : null;
 	      const clone = gunPath ? cloneAsset(gunPath, { ignorePlaceholders }) : null;
 	      const activeVisual = clone ? 'gltf' : 'placeholder';
 	      if (clone) {
@@ -57,7 +55,7 @@ import { markPlaceholder } from './visuals.js';
       const ring = new THREE.Mesh(
         new THREE.CylinderGeometry(0.55, 0.55, 0.08, 18),
         new THREE.MeshStandardMaterial({
-          color: weaponId === 'pistol' ? 0xffd24d : weaponId === 'smg' ? 0x7ac8ff : 0xff8a3d,
+          color: weapon?.color ?? 0xff8a3d,
           roughness: 0.4,
           metalness: 0.1,
           emissive: 0x111111
@@ -107,6 +105,7 @@ import { markPlaceholder } from './visuals.js';
       }
       const addAmount = getPickupAmmoAmount(weaponId);
       state.reserve = Math.min(weapon.reserveMax, state.reserve + addAmount);
+      emit('pickup', { entity, weaponId });
       if (entity.weapon.id === weaponId && state.ammo < weapon.magSize && state.reloadTimer <= 0) {
         startReload(entity);
       }

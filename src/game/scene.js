@@ -3,13 +3,18 @@ import { COLORS, CONFIG } from './config.js';
 import { canvas } from './dom.js';
 import { world } from './state.js';
 
+    // Phones/tablets (coarse pointer) get a lighter renderer: cheaper shadows,
+    // lower pixel ratio and no MSAA.
+    const LOW_QUALITY = window.matchMedia('(pointer: coarse)').matches;
+
     export function setupRenderer() {
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.render.maxDpr));
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: !LOW_QUALITY, alpha: false });
+      const maxDpr = LOW_QUALITY ? Math.min(CONFIG.render.maxDpr, 1.5) : CONFIG.render.maxDpr;
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxDpr));
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.shadowMap.type = LOW_QUALITY ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
       world.renderer = renderer;
       resize();
       window.addEventListener('resize', resize);
@@ -41,7 +46,7 @@ import { world } from './state.js';
       const dir = new THREE.DirectionalLight(0xfff2d6, CONFIG.lighting.dir);
       dir.position.set(12, 24, 8);
       dir.castShadow = true;
-      dir.shadow.mapSize.set(1024, 1024);
+      dir.shadow.mapSize.set(LOW_QUALITY ? 512 : 1024, LOW_QUALITY ? 512 : 1024);
       dir.shadow.camera.left = -20;
       dir.shadow.camera.right = 20;
       dir.shadow.camera.top = 20;

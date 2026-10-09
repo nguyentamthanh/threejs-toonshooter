@@ -3,6 +3,7 @@ import { getAITarget } from './ai.js';
 import { flashCover } from './combat.js';
 import { CONFIG } from './config.js';
 import { dashEl } from './dom.js';
+import { emit } from './events.js';
 import { getAimDirection, getAimPoint, getMoveInput } from './input.js';
 import { createGrenadeMesh } from './pickups.js';
 import { fx, world } from './state.js';
@@ -22,6 +23,7 @@ import { getPlayer } from './util.js';
       entity.dashTimer = CONFIG.movement.dashDuration;
       entity.dashCooldown = CONFIG.movement.dashCooldown;
       fx.fovPulse = 1;
+      emit('dash', { entity });
     }
 
 
@@ -66,6 +68,7 @@ import { getPlayer } from './util.js';
       entity.grenadeAmmo = Math.max(0, (entity.grenadeAmmo ?? 0) - 1);
       entity.grenadeCooldown = CONFIG.grenade.cooldown;
       if (!aiInitiated) fx.fovPulse = Math.max(fx.fovPulse, 0.45);
+      emit('throw', { entity });
     }
 
 
@@ -150,6 +153,7 @@ import { getPlayer } from './util.js';
       barrel.velocity.copy(direction).multiplyScalar(CONFIG.kick.barrelRollSpeed);
       barrel.rollTimer = CONFIG.kick.barrelRollTime;
       barrel.lastDamagedByTeam = sourceTeam;
+      emit('kick', { target: 'barrel', position: barrel.position });
     }
 
 
@@ -163,4 +167,5 @@ import { getPlayer } from './util.js';
         sourceTeam
       };
       flashCover(cover, 0.06);
+      emit('kick', { target: 'cover', position: cover.mesh?.position });
     }

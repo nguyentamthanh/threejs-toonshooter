@@ -45,6 +45,12 @@ import * as THREE from 'three';
       weapons: {
 	        pistol: {
 	          name: 'Pistol',
+          // node: gun mesh inside the character glTF · model: key in assets.json guns
+          node: 'Pistol',
+          model: 'Pistol',
+          icon: 'P',
+          color: 0xffd24d,
+          shake: 0.07,
 	          fireRate: 2.1,
 	          fireRateAI: 2.0,
 	          damage: 16,
@@ -64,6 +70,11 @@ import * as THREE from 'three';
 	        },
         smg: {
           name: 'SMG',
+          node: 'SMG',
+          model: 'SMG',
+          icon: 'M',
+          color: 0x7ac8ff,
+          shake: 0.05,
           fireRate: 10,
           fireRateAI: 6.0,
           damage: 8,
@@ -83,6 +94,11 @@ import * as THREE from 'three';
         },
         shotgun: {
           name: 'Shotgun',
+          node: 'Shotgun',
+          model: 'Shotgun',
+          icon: 'S',
+          color: 0xff8a3d,
+          shake: 0.2,
           fireRate: 1.2,
           fireRateAI: 1.0,
           damage: 12,
@@ -100,7 +116,85 @@ import * as THREE from 'three';
           knockback: 2.5,
           muzzleSize: 0.46,
           tracer: 0xff8a3d
+        },
+        ak: {
+          name: 'Rifle',
+          node: 'AK',
+          model: 'AK',
+          icon: 'R',
+          color: 0xb6ff6a,
+          shake: 0.08,
+          fireRate: 7.5,
+          fireRateAI: 5.0,
+          damage: 11,
+          magSize: 24,
+          reserveMax: 72,
+          reserveStart: 0,
+          dropChance: 0.22,
+          reload: 1.35,
+          reloadType: 'mag',
+          spreadPlayer: THREE.MathUtils.degToRad(2.2),
+          spreadAI: THREE.MathUtils.degToRad(4.5),
+          range: 32,
+          auto: true,
+          knockback: 0.35,
+          muzzleSize: 0.36,
+          tracer: 0xffe08a
+        },
+        sniper: {
+          name: 'Sniper',
+          node: 'Sniper',
+          model: 'Sniper',
+          icon: 'X',
+          color: 0x9df2ff,
+          shake: 0.26,
+          fireRate: 0.75,
+          fireRateAI: 0.55,
+          damage: 60,
+          magSize: 4,
+          reserveMax: 12,
+          reserveStart: 0,
+          dropChance: 0.12,
+          reload: 1.8,
+          reloadType: 'mag',
+          spreadPlayer: THREE.MathUtils.degToRad(0.15),
+          spreadAI: THREE.MathUtils.degToRad(0.9),
+          range: 48,
+          auto: false,
+          knockback: 1.6,
+          muzzleSize: 0.5,
+          tracer: 0x9df2ff
+        },
+        rocket: {
+          name: 'Rocket',
+          node: 'RocketLauncher',
+          model: 'RocketLauncher',
+          icon: 'B',
+          color: 0xff5a5a,
+          shake: 0.32,
+          fireRate: 0.6,
+          fireRateAI: 0.45,
+          damage: 20,
+          magSize: 1,
+          reserveMax: 4,
+          reserveStart: 0,
+          dropChance: 0.08,
+          reload: 2.0,
+          reloadType: 'mag',
+          spreadPlayer: THREE.MathUtils.degToRad(0.5),
+          spreadAI: THREE.MathUtils.degToRad(1.5),
+          range: 30,
+          auto: false,
+          knockback: 0,
+          muzzleSize: 0.6,
+          tracer: 0xff7a3d,
+          // Explodes where the shot lands (same falloff rules as grenades)
+          explosion: { explosionRadius: 3.6, maxDamage: 75, knockback: 18, stun: 0.6 }
         }
+      },
+      hazards: {
+        mine: { triggerRadius: 0.75, explosionRadius: 3.0, maxDamage: 70, knockback: 20, stun: 0.9 },
+        bearTrap: { triggerRadius: 0.6, damage: 15, stun: 1.6, rearm: 6 }
       },
       nearMissDrama: {
         distance: 0.35,
@@ -186,6 +280,10 @@ import * as THREE from 'three';
         deathmatch: { name: '4-Player FFA', playerCount: 4, arenaScale: 1.3, aiCount: 3, lives: 3 }
       }
     };
+
+
+    // Slot order: number keys 1..N and the touch "Swap" button follow this.
+    export const WEAPON_IDS = Object.keys(CONFIG.weapons);
 
 
     export const COLORS = {

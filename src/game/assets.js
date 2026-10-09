@@ -1,6 +1,7 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import * as THREE from 'three';
+import { CONFIG } from './config.js';
 import { assets, settings, world } from './state.js';
 
     export async function loadAssets() {
@@ -12,11 +13,14 @@ import { assets, settings, world } from './state.js';
 	        // Characters
 	        manifest.characters.Character_Soldier,
 	        manifest.characters.Character_Enemy,
-	        // Guns
-	        manifest.guns.Pistol,
-	        manifest.guns.SMG,
-	        manifest.guns.Shotgun,
+	        manifest.characters.Character_Hazmat,
+	        // Guns (pickup models for every configured weapon)
+	        ...Object.values(CONFIG.weapons).map((weapon) => manifest.guns[weapon.model]),
 	        manifest.guns.Grenade,
+	        // Hazards
+	        manifest.environment.Landmine,
+	        manifest.environment.BearTrap_Open,
+	        manifest.environment.BearTrap_Closed,
 	        // Main cover
 	        manifest.environment.Tank,
 	        manifest.environment.Debris_BrokenCar,
@@ -156,22 +160,19 @@ import { assets, settings, world } from './state.js';
 
 
     export function findBuiltInWeapons(root) {
-      const weaponMap = {
-        pistol: ['pistol'],
-        smg: ['smg'],
-        shotgun: ['shotgun']
-      };
+      // Each weapon's `node` is the exact name of its gun mesh in the character glTF.
+      const nodeToWeapon = new Map(
+        Object.entries(CONFIG.weapons).map(([weaponId, weapon]) => [weapon.node.toLowerCase(), weaponId])
+      );
       const otherWeaponKeywords = ['ak', 'revolver', 'knife', 'shovel', 'sniper', 'grenade', 'launcher', 'cannon', 'rocket'];
       const found = {};
       root.traverse((child) => {
         const name = (child.name || '').toLowerCase();
-        // Map to game weapon IDs
-        for (const [weaponId, keywords] of Object.entries(weaponMap)) {
-          if (keywords.some(k => name === k || name.includes(k))) {
-            found[weaponId] = child;
-            child.visible = false;
-            return;
-          }
+        const weaponId = nodeToWeapon.get(name);
+        if (weaponId) {
+          found[weaponId] = child;
+          child.visible = false;
+          return;
         }
         // Hide other weapons we don't use
         if (otherWeaponKeywords.some(k => name.includes(k))) {

@@ -3,15 +3,19 @@ import { buildCoverNodes, syncCoverColliderFromMesh } from './arena.js';
 import { CONFIG } from './config.js';
 import { bannerEl, killCamTextEl, matchStats, matchTitle, suddenDeathEl } from './dom.js';
 import { createWeaponLoadout, getSpawnPoints, syncWeaponVisibility } from './entities.js';
+import { emit } from './events.js';
+import { spawnHazards } from './hazards.js';
 import { setTimeScale, spawnHitEffect } from './fx.js';
 import { showBanner, updateBestTimeUI, updatePopups, updateRoundPips } from './hud.js';
 import { getModeDifficultyPreset } from './loop.js';
 import { applyGameMode, getActiveGameMode, setMode } from './menu.js';
 import { clearGrenades, clearPickups } from './pickups.js';
 import { fx, state, world } from './state.js';
+import { clearScheduled, schedule } from './timers.js';
 import { formatTime, getEnemy, getEntityByTeam, getPlayer } from './util.js';
 
     export function startMatch() {
+      clearScheduled();
       if (state.activeGameMode !== state.gameMode) {
         applyGameMode(state.gameMode);
       }
@@ -44,11 +48,11 @@ import { formatTime, getEnemy, getEntityByTeam, getPlayer } from './util.js';
 	      updateRoundPips();
 	      setMode('roundIntro');
       showBanner(state.gameMode === 'deathmatch' ? 'FREE FOR ALL · FIGHT!' : `ROUND ${state.round} · FIGHT!`);
-      setTimeout(() => {
+      schedule(1, () => {
         if (state.mode === 'roundIntro') {
           setMode('playing');
         }
-      }, 1000);
+      });
     }
 
 
@@ -143,10 +147,9 @@ import { formatTime, getEnemy, getEntityByTeam, getPlayer } from './util.js';
       // Clean up any remaining particles
       world.fxParticles.forEach((particle) => {
         world.scene.remove(particle);
-        particle.geometry?.dispose();
         particle.material?.dispose();
       });
-      world.fxParticles = [];
+      world.fxParticles.length = 0;
 
       // Reset all barrels to their initial state
       world.barrels.forEach((barrel) => {
@@ -183,6 +186,7 @@ import { formatTime, getEnemy, getEntityByTeam, getPlayer } from './util.js';
         syncCoverColliderFromMesh(cover);
       });
       buildCoverNodes();
+      spawnHazards();
     }
 
 
@@ -238,8 +242,9 @@ import { formatTime, getEnemy, getEntityByTeam, getPlayer } from './util.js';
 
       setTimeScale(0.8, 0.35);
       showBanner(winner === 'p1' ? 'PLAYER 1 WINS ROUND' : 'PLAYER 2 WINS ROUND');
+      emit('roundEnd', { winner, timeExpired });
 
-      setTimeout(() => {
+      schedule(1.2, () => {
         state.roundEnding = false;
         if (state.wins.p1 >= CONFIG.match.roundsToWin || state.wins.p2 >= CONFIG.match.roundsToWin || timeExpired) {
           endMatch(winner);
@@ -252,11 +257,11 @@ import { formatTime, getEnemy, getEntityByTeam, getPlayer } from './util.js';
 	          clearGrenades();
 	          setMode('roundIntro');
 	          showBanner(`ROUND ${state.round} · FIGHT!`);
-          setTimeout(() => {
+          schedule(1, () => {
             if (state.mode === 'roundIntro') setMode('playing');
-          }, 1000);
+          });
         }
-      }, 1200);
+      });
     }
 
 
@@ -391,6 +396,7 @@ import { formatTime, getEnemy, getEntityByTeam, getPlayer } from './util.js';
       state.suddenDeath = false;
       suddenDeathEl.classList.remove('show');
       setMode('matchOver');
+      emit('matchEnd', { winner });
       const elapsed = CONFIG.match.totalTime - state.timeLeft;
       if (!winner) {
         matchTitle.textContent = 'MATCH OVER';

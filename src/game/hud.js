@@ -149,7 +149,7 @@ import { formatTime, getPlayer, getTeamColor } from './util.js';
       const state = getWeaponState(entity, activeId);
       if (!weapon || !state) return;
 
-      panel.weaponIcon.textContent = weapon.name[0];
+      panel.weaponIcon.textContent = weapon.icon || weapon.name[0];
       panel.weaponName.textContent = weapon.name;
       if (isSwitching) {
         panel.weaponAmmo.textContent = 'Switching';

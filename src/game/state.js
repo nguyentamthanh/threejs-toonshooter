@@ -3,7 +3,9 @@ import { CONFIG } from './config.js';
 
     export const input = {
       keys: {},
-      mouse: { x: 0, y: 0, down: false, justPressed: false }
+      mouse: { x: 0, y: 0, down: false, justPressed: false },
+      // Virtual sticks, -1..1 with y up. Filled in by touch.js.
+      touch: { enabled: false, move: { x: 0, y: 0 }, aim: { active: false, x: 0, y: 0 } }
     };
 
 
@@ -36,11 +38,34 @@ import { CONFIG } from './config.js';
 
 
 	    export const settings = {
-	      usePlaceholders: false
+	      usePlaceholders: false,
+	      playerSkin: readStored('tinyToonDuel_skin') || 'soldier'
 	    };
 
 
-	    export const storedVisualMode = localStorage.getItem('tinyToonDuel_visualMode');
+	    // Selected arena (see maps.js); applied when the arena is (re)built.
+	    state.mapId = readStored('tinyToonDuel_map') || 'yard';
+
+
+	    export function readStored(key) {
+	      try {
+	        return localStorage.getItem(key);
+	      } catch {
+	        return null;
+	      }
+	    }
+
+
+	    export function writeStored(key, value) {
+	      try {
+	        localStorage.setItem(key, value);
+	      } catch {
+	        // storage blocked (private mode): keep the choice for this session only
+	      }
+	    }
+
+
+	    export const storedVisualMode = readStored('tinyToonDuel_visualMode');
 
 	    if (storedVisualMode === 'placeholder') {
 	      settings.usePlaceholders = true;
@@ -80,6 +105,7 @@ import { CONFIG } from './config.js';
 	      spilledBarrels: [], // Track spilled barrel meshes for cleanup
 	      grenades: [],
 	      pickups: [],
+	      hazards: [],
 	      fallingCrates: [],
 	      skyDropTimer: 0,
 	      arenaObjects: [],
@@ -96,7 +122,7 @@ import { CONFIG } from './config.js';
 	    };
 
 
-	    export const stored = localStorage.getItem('tinyToonDuel_bestWinSeconds');
+	    export const stored = readStored('tinyToonDuel_bestWinSeconds');
 
 	    if (stored) {
 	      const parsed = Number(stored);
@@ -104,7 +130,7 @@ import { CONFIG } from './config.js';
 	    }
 
 
-	    export const storedDifficulty = localStorage.getItem('tinyToonDuel_aiDifficultyByMode');
+	    export const storedDifficulty = readStored('tinyToonDuel_aiDifficultyByMode');
 
 	    if (storedDifficulty) {
 	      try {

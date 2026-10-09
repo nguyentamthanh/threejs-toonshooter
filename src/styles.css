@@ -660,7 +660,8 @@
 	      opacity: 0.8;
 	    }
 
-	    #visualToggle {
+	    #visualToggle,
+	    #soundToggle {
 	      position: absolute;
 	      top: 14px;
 	      right: 14px;
@@ -681,15 +682,133 @@
 	      transition: transform 0.15s ease, filter 0.15s ease;
 	    }
 
-	    #visualToggle:hover {
+	    #soundToggle {
+	      right: auto;
+	      left: 14px;
+	      top: auto;
+	      bottom: 14px;
+	      padding: 8px 12px;
+	      font-size: 12px;
+	    }
+
+	    #visualToggle:hover,
+	    #soundToggle:hover {
 	      transform: translateY(-1px);
 	      filter: brightness(1.05);
 	    }
 
-	    #visualToggle .pill {
+	    #visualToggle .pill,
+	    #soundToggle .pill {
 	      padding: 4px 10px;
 	      border-radius: 999px;
 	      background: rgba(255, 255, 255, 0.08);
 	      border: 1px solid rgba(255, 255, 255, 0.12);
 	      font-weight: 700;
 	    }
+
+    /* ---- Touch controls & mobile layout ---- */
+    html, body { overscroll-behavior: none; }
+
+    #canvasWrap {
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    .startBtn { margin-top: 6px; min-width: 140px; }
+
+    #touchControls { position: absolute; inset: 0; display: none; }
+
+    .touch-device #hud[data-mode="playing"] #touchControls,
+    .touch-device #hud[data-mode="roundIntro"] #touchControls { display: block; }
+
+    .touch-device .hideOnTouch,
+    .touch-device #controls { display: none; }
+
+    .touchZone {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 50%;
+      pointer-events: auto;
+      touch-action: none;
+    }
+    #touchMoveZone { left: 0; }
+    #touchAimZone { right: 0; }
+
+    .stickBase {
+      position: absolute;
+      width: 112px;
+      height: 112px;
+      margin: -56px 0 0 -56px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.1);
+      opacity: 0;
+      transition: opacity 0.1s;
+      pointer-events: none;
+    }
+    .stickBase.active { opacity: 1; }
+    .stickKnob {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 52px;
+      height: 52px;
+      margin: -26px 0 0 -26px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.55);
+    }
+
+    #touchButtons {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    #touchButtons button,
+    #touchPause {
+      pointer-events: auto;
+      touch-action: none;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 1px solid var(--panel-border);
+      background: var(--panel);
+      color: var(--ui-light);
+      font: 700 10px var(--font-body);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 0;
+    }
+    #touchButtons button:active,
+    #touchPause:active { filter: brightness(1.4); transform: scale(0.94); }
+    #touchPause { position: absolute; right: 14px; top: 64px; width: 38px; height: 38px; font-size: 14px; }
+
+    #rotateHint {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      background: #10131a;
+      color: #fff;
+      font: 600 20px var(--font-body);
+    }
+
+    @media (pointer: coarse) {
+      body { min-height: 100dvh; }
+      #app { padding: 0; width: 100vw; height: 100dvh; }
+      #canvasWrap { width: min(100vw, calc(100dvh * 16 / 9)); border-radius: 0; }
+    }
+
+    @media (orientation: portrait) and (pointer: coarse) {
+      #rotateHint { display: flex; }
+    }

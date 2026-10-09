@@ -3,11 +3,13 @@ import { cloneAsset, findBuiltInWeapons, normalizeToHeight } from './assets.js';
 import { COLORS, CONFIG, SPAWN_POINTS } from './config.js';
 import { createSprite } from './fx.js';
 import { getActiveGameMode } from './menu.js';
-import { assets, fx, state, world } from './state.js';
+import { assets, fx, settings, state, world } from './state.js';
 
     export function spawnEntities() {
       const manifest = assets.manifest.assets.toonshooter;
-      const playerPath = manifest.characters.Character_Soldier;
+      const playerPath = settings.playerSkin === 'hazmat'
+        ? manifest.characters.Character_Hazmat
+        : manifest.characters.Character_Soldier;
       const enemyPath = manifest.characters.Character_Enemy;
       const guns = {
         pistol: manifest.guns.Pistol,

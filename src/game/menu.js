@@ -1,10 +1,12 @@
 import { buildArena, clearArena } from './arena.js';
+import { onModeChange } from './audio.js';
 import { BASE_ARENA, CONFIG } from './config.js';
 import { bannerEl, difficultyButtons, difficultyLabelEl, hud, matchOverlay, menuOverlay, modeButtons, modeRulesEl, modeSubtitleEl, pauseOverlay, suddenDeathEl } from './dom.js';
 import { clearEntities, spawnEntities } from './entities.js';
 import { setupHUD } from './hud.js';
+import { MAPS } from './maps.js';
 import { clearPickups } from './pickups.js';
-import { state } from './state.js';
+import { settings, state, writeStored } from './state.js';
 
 	    export function setupMenuModes() {
 	      modeButtons.forEach((button) => {
@@ -13,7 +15,59 @@ import { state } from './state.js';
 	        });
 	      });
 	      setupDifficultySelect();
+	      setupMapAndSkinSelect();
 	      setGameMode(state.gameMode);
+	    }
+
+
+	    // Arena and fighter choices rebuild the scene right away so the menu
+	    // backdrop previews the selection.
+	    function setupMapAndSkinSelect() {
+	      const mapButtons = document.getElementById('mapButtons');
+	      if (mapButtons) {
+	        Object.entries(MAPS).forEach(([mapId, map]) => {
+	          const button = document.createElement('button');
+	          button.type = 'button';
+	          button.className = 'difficultyBtn mapBtn';
+	          button.dataset.map = mapId;
+	          button.textContent = map.name;
+	          button.addEventListener('click', () => {
+	            if (state.mapId === mapId) return;
+	            state.mapId = mapId;
+	            writeStored('tinyToonDuel_map', mapId);
+	            refreshMenuSelection();
+	            rebuildForMenu();
+	          });
+	          mapButtons.appendChild(button);
+	        });
+	      }
+	      document.querySelectorAll('.skinBtn').forEach((button) => {
+	        button.addEventListener('click', () => {
+	          const skin = button.dataset.skin;
+	          if (settings.playerSkin === skin) return;
+	          settings.playerSkin = skin;
+	          writeStored('tinyToonDuel_skin', skin);
+	          refreshMenuSelection();
+	          rebuildForMenu();
+	        });
+	      });
+	      refreshMenuSelection();
+	    }
+
+
+	    function refreshMenuSelection() {
+	      document.querySelectorAll('.mapBtn').forEach((button) => {
+	        button.classList.toggle('active', button.dataset.map === state.mapId);
+	      });
+	      document.querySelectorAll('.skinBtn').forEach((button) => {
+	        button.classList.toggle('active', button.dataset.skin === settings.playerSkin);
+	      });
+	    }
+
+
+	    function rebuildForMenu() {
+	      if (state.mode !== 'menu' && state.mode !== 'loading') return;
+	      applyGameMode(state.activeGameMode || state.gameMode);
 	    }
 
 
@@ -114,6 +168,7 @@ import { state } from './state.js';
 
     export function setMode(mode) {
       state.mode = mode;
+      onModeChange();
       hud.dataset.mode = mode;
       menuOverlay.classList.toggle('visible', mode === 'menu');
       pauseOverlay.classList.toggle('visible', mode === 'paused');
